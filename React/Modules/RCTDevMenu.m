@@ -176,11 +176,6 @@ RCT_EXPORT_MODULE()
                                name:RCTJavaScriptDidLoadNotification
                              object:nil];
 
-    [notificationCenter addObserver:self
-                           selector:@selector(jsLoaded:)
-                               name:RCTJavaScriptDidFailToLoadNotification
-                             object:nil];
-
     _defaults = [NSUserDefaults standardUserDefaults];
     _settings = [[NSMutableDictionary alloc] initWithDictionary:[_defaults objectForKey:RCTDevMenuSettingsKey]];
     _extraMenuItems = [NSMutableArray new];
@@ -271,6 +266,8 @@ RCT_EXPORT_MODULE()
  */
 - (void)updateSettings:(NSDictionary *)settings
 {
+  [_settings setDictionary:settings];
+
   // Fire handlers for items whose values have changed
   for (RCTDevMenuItem *item in _extraMenuItems) {
     if (item.key) {
@@ -282,11 +279,6 @@ RCT_EXPORT_MODULE()
     }
   }
 
-  if ([settings isEqualToDictionary:_settings]) {
-    return;
-  }
-
-  [_settings setDictionary:settings];
   self.shakeToShow = [_settings[@"shakeToShow"] ?: @YES boolValue];
   self.profilingEnabled = [_settings[@"profilingEnabled"] ?: @NO boolValue];
   self.liveReloadEnabled = [_settings[@"liveReloadEnabled"] ?: @NO boolValue];
@@ -415,11 +407,8 @@ RCT_EXPORT_MODULE()
   Class chromeExecutorClass = NSClassFromString(@"RCTWebSocketExecutor");
   if (!chromeExecutorClass) {
     [items addObject:[RCTDevMenuItem buttonItemWithTitle:@"Chrome Debugger Unavailable" handler:^{
-      [[[UIAlertView alloc] initWithTitle:@"Chrome Debugger Unavailable"
-                                  message:@"You need to include the RCTWebSocket library to enable Chrome debugging"
-                                 delegate:nil
-                        cancelButtonTitle:@"OK"
-                        otherButtonTitles:nil] show];
+      UIAlertView *alert = RCTAlertView(@"Chrome Debugger Unavailable", @"You need to include the RCTWebSocket library to enable Chrome debugging", nil, @"OK", nil);
+      [alert show];
     }]];
   } else {
     BOOL isDebuggingInChrome = _executorClass && _executorClass == chromeExecutorClass;
@@ -455,7 +444,7 @@ RCT_EXPORT_MODULE()
 
 RCT_EXPORT_METHOD(show)
 {
-  if (_actionSheet || !_bridge) {
+  if (_actionSheet || !_bridge || RCTRunningInAppExtension()) {
     return;
   }
 
@@ -482,7 +471,7 @@ RCT_EXPORT_METHOD(show)
   actionSheet.cancelButtonIndex = actionSheet.numberOfButtons - 1;
 
   actionSheet.actionSheetStyle = UIBarStyleBlack;
-  [actionSheet showInView:[UIApplication sharedApplication].keyWindow.rootViewController.view];
+  [actionSheet showInView:RCTSharedApplication().keyWindow.rootViewController.view];
   _actionSheet = actionSheet;
   _presentedItems = items;
 }

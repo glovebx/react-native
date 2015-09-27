@@ -1,6 +1,8 @@
-# React Native [![npm version](https://badge.fury.io/js/react-native.svg)](http://badge.fury.io/js/react-native)
+# React Native [![Build Status](https://travis-ci.org/facebook/react-native.svg?branch=master)](https://travis-ci.org/facebook/react-native)  [![npm version](https://badge.fury.io/js/react-native.svg)](http://badge.fury.io/js/react-native)
 
 React Native enables you to build world-class application experiences on native platforms using a consistent developer experience based on JavaScript and [React](http://facebook.github.io/react). The focus of React Native is on developer efficiency across all the platforms you care about - learn once, write anywhere. Facebook uses React Native in multiple production apps and will continue investing in React Native.
+
+Supported operating systems are >= Android 4.1 (API 16) and >= iOS 7.0.
 
 - [Getting Started](#getting-started)
 - [Getting Help](#getting-help)
@@ -48,7 +50,20 @@ The React Native documentation only discusses the components, APIs and topics sp
 - `git clone https://github.com/facebook/react-native.git`
 - `cd react-native && npm install`
 
+### Running the examples on iOS
+
 Now open any example (the `.xcodeproj` file in each of the `Examples` subdirectories) and hit Run in Xcode.
+
+### Running the examples on Android
+
+Note that you'll need the Android NDK installed, see [prerequisites](https://github.com/facebook/react-native/blob/master/ReactAndroid/README.md#prerequisites).
+
+```bash
+./gradlew :Examples:Movies:android:app:installDebug
+# Start the packager in a separate shell (make sure you ran npm install):
+./packager/packager.sh
+# Open the Movies app in your emulator
+```
 
 ## Extending React Native
 
@@ -65,8 +80,9 @@ The GitHub issues are intended for bug reports and feature requests. For help an
 
 ## Contributing
 
-For more information about contributing, see our [Contribution Guidelines](https://github.com/facebook/react-native/blob/master/CONTRIBUTING.md).
+For more information about contributing PRs and issues, see our [Contribution Guidelines](https://github.com/facebook/react-native/blob/master/CONTRIBUTING.md).
 
+We encourage the community to ask and answer questions on Stack Overflow with [the react-native tag](https://stackoverflow.com/questions/tagged/react-native). It's a great way to help out and be involved!
 
 ## License
 
@@ -75,3 +91,4 @@ React is [BSD licensed](./LICENSE). We also provide an additional [patent grant]
 React documentation is [Creative Commons licensed](./LICENSE-docs).
 
 Examples provided in this repository and in the documentation are [separately licensed](./LICENSE-examples), as are some of the [custom components](./LICENSE-CustomComponents).
+
