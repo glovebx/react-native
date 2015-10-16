@@ -226,7 +226,15 @@ static void RCTInstallJSCProfiler(RCTBridge *bridge, JSContextRef context)
         nativeProfilerEnableByteCode();
       }
 
+      static BOOL isProfiling = NO;
       [bridge.devMenu addItem:[RCTDevMenuItem toggleItemWithKey:RCTJSCProfilerEnabledDefaultsKey title:@"Start Profiling" selectedTitle:@"Stop Profiling" handler:^(BOOL shouldStart) {
+
+        if (shouldStart == isProfiling) {
+          return;
+        }
+
+        isProfiling = shouldStart;
+
         if (shouldStart) {
           nativeProfilerStart(context, "profile");
         } else {
@@ -336,17 +344,13 @@ static void RCTInstallJSCProfiler(RCTBridge *bridge, JSContextRef context)
 
 - (void)toggleProfilingFlag:(NSNotification *)notification
 {
-  JSObjectRef globalObject = JSContextGetGlobalObject(_context.ctx);
-
-  bool enabled = [notification.name isEqualToString:RCTProfileDidStartProfiling];
-  JSStringRef JSName = JSStringCreateWithUTF8CString("__BridgeProfilingIsProfiling");
-  JSObjectSetProperty(_context.ctx,
-                      globalObject,
-                      JSName,
-                      JSValueMakeBoolean(_context.ctx, enabled),
-                      kJSPropertyAttributeNone,
-                      NULL);
-  JSStringRelease(JSName);
+  [self executeBlockOnJavaScriptQueue:^{
+    BOOL enabled = [notification.name isEqualToString:RCTProfileDidStartProfiling];
+    NSString *script = [NSString stringWithFormat:@"var p = require('BridgeProfiling') || {}; p.setEnabled && p.setEnabled(%@)", enabled ? @"true" : @"false"];
+    JSStringRef scriptJSRef = JSStringCreateWithUTF8CString(script.UTF8String);
+    JSEvaluateScript(_context.ctx, scriptJSRef, NULL, NULL, 0, NULL);
+    JSStringRelease(scriptJSRef);
+  }];
 }
 
 - (void)_addNativeHook:(JSObjectCallAsFunctionCallback)hook withName:(const char *)name
@@ -465,7 +469,7 @@ static void RCTInstallJSCProfiler(RCTBridge *bridge, JSContextRef context)
       }
     }
 
-    if (!resultJSRef) {
+    if (errorJSRef) {
       onComplete(nil, RCTNSErrorFromJSError(contextJSRef, errorJSRef));
       return;
     }
@@ -490,7 +494,7 @@ static void RCTInstallJSCProfiler(RCTBridge *bridge, JSContextRef context)
   }), 0, @"js_call", (@{@"module":name, @"method": method, @"args": arguments}))];
 }
 
-- (void)executeApplicationScript:(NSString *)script
+- (void)executeApplicationScript:(NSData *)script
                        sourceURL:(NSURL *)sourceURL
                       onComplete:(RCTJavaScriptCompleteBlock)onComplete
 {
@@ -504,9 +508,15 @@ static void RCTInstallJSCProfiler(RCTBridge *bridge, JSContextRef context)
       return;
     }
 
+    // JSStringCreateWithUTF8CString expects a null terminated C string
+    NSMutableData *nullTerminatedScript = [NSMutableData dataWithCapacity:script.length + 1];
+
+    [nullTerminatedScript appendData:script];
+    [nullTerminatedScript appendBytes:"" length:1];
+
     RCTPerformanceLoggerStart(RCTPLScriptExecution);
     JSValueRef jsError = NULL;
-    JSStringRef execJSString = JSStringCreateWithCFString((__bridge CFStringRef)script);
+    JSStringRef execJSString = JSStringCreateWithUTF8CString(nullTerminatedScript.bytes);
     JSStringRef jsURL = JSStringCreateWithCFString((__bridge CFStringRef)sourceURL.absoluteString);
     JSValueRef result = JSEvaluateScript(strongSelf->_context.ctx, execJSString, NULL, jsURL, 0, &jsError);
     JSStringRelease(jsURL);

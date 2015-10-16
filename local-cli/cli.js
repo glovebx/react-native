@@ -4,16 +4,19 @@
 
 'use strict';
 
+var bundle = require('../private-cli/src/bundle/bundle');
+var Config = require('../private-cli/src/util/Config');
 var fs = require('fs');
-var spawn = require('child_process').spawn;
-var path = require('path');
-var generateAndroid = require('./generate-android.js');
+var generate = require('../private-cli/src/generate/generate');
 var init = require('./init.js');
-var install = require('./install.js');
-var bundle = require('./bundle.js');
-var newLibrary = require('./new-library.js');
+var library = require('../private-cli/src/library/library');
 var runAndroid = require('./run-android.js');
 var runPackager = require('./run-packager.js');
+
+// TODO: remove once we fully roll out the `private-cli` based cli
+// var bundle_DEPRECATED = require('./bundle.js');
+// var generateAndroid_DEPRECATED = require('./generate-android.js');
+// var newLibrary_DEPRECATED = require('./new-library.js');
 
 function printUsage() {
   console.log([
@@ -21,7 +24,6 @@ function printUsage() {
     '',
     'Commands:',
     '  start: starts the webserver',
-    '  install: installs npm react components',
     '  bundle: builds the javascript bundle for offline use',
     '  new-library: generates a native library bridge',
     '  android: generates an Android project for your app'
@@ -43,27 +45,38 @@ function run() {
     printUsage();
   }
 
+  var config = Config.get(__dirname);
+
   switch (args[0]) {
   case 'start':
     runPackager();
     break;
-  case 'install':
-    install.init();
-    break;
   case 'bundle':
-    bundle.init(args);
+    bundle(args, config).done();
+    // bundle_DEPRECATED.init(args);
     break;
   case 'new-library':
-    newLibrary.init(args);
+    library(args, config).done();
+    // newLibrary_DEPRECATED.init(args);
     break;
   case 'init':
     printInitWarning();
     break;
   case 'android':
-    generateAndroid(
-      process.cwd(),
-      JSON.parse(fs.readFileSync('package.json', 'utf8')).name
-    );
+    generate(
+      [
+        '--platform', 'android',
+        '--project-path', process.cwd(),
+        '--project-name', JSON.parse(
+          fs.readFileSync('package.json', 'utf8')
+        ).name
+      ],
+      config
+    ).done();
+    // generateAndroid(
+    //   process.cwd(),
+    //   JSON.parse(fs.readFileSync('package.json', 'utf8')).name
+    // );
     break;
   case 'run-android':
     runAndroid();
